@@ -2,23 +2,30 @@
   --background-colour: #eee;
   --container-colour: #fff;
   --message-colour: #eee;
-  --border-colour: #ccc;
+  --border-colour: #bbb;
+  --input-colour: #eee;
+  --button-colour: #ddd;
 
   --text-colour: #000;
-
-  --logged-in: true;
+  --text-colour-2: #666;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --background-colour: #222;
     --container-colour: #444;
+    --message-colour: #666;
+    --border-colour: #ccc;
+    --input-colour: #666;
+    --button-colour: #444;
 
     --text-colour: #fff;
+    --text-colour-2: #bbb;
   }
 }
 
-* {
+*,
+input::placeholder {
   color: var(--text-colour);
   font-family: Verdana, Geneva, Tahoma, sans-serif;
 }
@@ -68,7 +75,7 @@ body {
 
 .message-timestamp {
   font-size: 0.9em;
-  color: #666;
+  color: var(--text-colour-2);
 }
 
 .message-avatar {
@@ -121,11 +128,26 @@ body {
 
 #messageInput {
   width: 100%;
-  border-radius: 5px;
-  border: 1px solid var(--border-colour);
 }
 
 #inputSection {
   display: flex;
   gap: 5px;
+}
+
+input {
+  background-color: var(--input-colour);
+  border: 1px solid var(--border-colour);
+  border-radius: 2px;
+}
+
+button {
+  background-color: var(--button-colour);
+  border: 1px solid var(--border-colour);
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+#emailLogin {
+  margin-top: 5px;
 }
