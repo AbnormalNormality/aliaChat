@@ -1,75 +1,152 @@
 import {
-  getNickname,
-  setUserNickname,
   sendMessage,
   listenMessages,
   signIn,
-  signOutUser,
   onAuthStateChange,
   getCurrentUser,
+  signOutUser,
+  setUserProfile,
+  getUserProfile,
 } from "./firebase-backend.js";
 
-// DOM Elements
-const signInGoogleBtn = document.getElementById("signInGoogle");
-const signInGitHubBtn = document.getElementById("signInGitHub");
-const signInMicrosoftBtn = document.getElementById("signInMicrosoft");
-const signInEmailBtn = document.getElementById("signInEmail");
-const signUpEmailBtn = document.getElementById("signUpEmail");
-const signOutBtn = document.getElementById("signOutBtn");
+const loggedOutDiv = document.getElementById("loggedOut");
+const loggedInDiv = document.getElementById("loggedIn");
+
+const userNameSpan = document.getElementById("userName");
+const providerSpan = document.getElementById("provider");
 
 const emailInput = document.getElementById("email");
 const passwordInput = document.getElementById("password");
 
-const userInfo = document.getElementById("userInfo");
-const userNameSpan = document.getElementById("userName");
-const providerSpan = document.getElementById("provider");
-
 const messagesDiv = document.getElementById("messages");
-const inputSection = document.getElementById("inputSection");
 const sendBtn = document.getElementById("sendBtn");
 const messageInput = document.getElementById("messageInput");
 
+const signOutBtn = document.getElementById("signOutBtn");
+
+const userPhotoImg = document.getElementById("userPhoto");
+
 let unsubscribeMessages = null;
+const userCache = {};
+
+// Group buttons by ID and method
+const buttonMethods = {
+  signInGoogle: "google",
+  signInGitHub: "github",
+  signInMicrosoft: "microsoft",
+  signInEmail: "email",
+  signUpEmail: "signup-email",
+};
+
+// Cache buttons in an object
+const signInButtons = Object.fromEntries(
+  Object.keys(buttonMethods).map((id) => [id, document.getElementById(id)])
+);
+
+// Helper: disable/enable all sign-in buttons
+function setButtonsDisabled(disabled) {
+  Object.values(signInButtons).forEach((btn) => (btn.disabled = disabled));
+}
+
+// Attach event listeners in a loop to reduce duplication
+for (const [id, method] of Object.entries(buttonMethods)) {
+  signInButtons[id].addEventListener("click", () => handleSignIn(method));
+}
 
 function resetUIForSignedOut() {
-  userInfo.style.display = "none";
-  inputSection.style.display = "none";
-  signOutBtn.style.display = "none";
-
-  signInGoogleBtn.style.display = "inline-block";
-  signInGitHubBtn.style.display = "inline-block";
-  signInMicrosoftBtn.style.display = "inline-block";
-  signInEmailBtn.style.display = "inline-block";
-  signUpEmailBtn.style.display = "inline-block";
-
-  emailInput.style.display = "inline-block";
-  passwordInput.style.display = "inline-block";
-
+  loggedInDiv.style.display = "none";
+  loggedOutDiv.style.display = "block";
   messagesDiv.innerHTML = "";
-  if (unsubscribeMessages) unsubscribeMessages();
+
+  // Clear userCache safely on sign-out
+  Object.keys(userCache).forEach((key) => delete userCache[key]);
+
+  try {
+    if (unsubscribeMessages) unsubscribeMessages();
+  } catch (e) {
+    console.error("Failed to unsubscribe from messages:", e);
+  }
 }
 
 async function displayMessages(messages) {
-  messagesDiv.innerHTML = ""; // Clear old messages
+  const nearBottomThreshold = 10; // pixels
+  const isAtBottom =
+    messagesDiv.scrollHeight -
+      messagesDiv.scrollTop -
+      messagesDiv.clientHeight <
+    nearBottomThreshold;
 
-  const reversed = [...messages].reverse(); // Newest first
+  messagesDiv.innerHTML = "";
+  const sortedMessages = [...messages];
 
-  for (const msg of reversed) {
+  for (const msg of sortedMessages) {
+    const time =
+      msg.timestamp instanceof Date
+        ? msg.timestamp.toLocaleString(undefined, {
+            hour: "2-digit",
+            minute: "2-digit",
+          })
+        : "";
+
+    // Cache nickname and photoURL
+    let profile = userCache[msg.uid];
+    if (!profile) {
+      profile = (await getUserProfile(msg.uid)) || {};
+      userCache[msg.uid] = profile;
+    }
+
+    const nickname = profile.nickname || "Anon";
+    const photoURL = profile.photoURL || null;
+
     const msgDiv = document.createElement("div");
     msgDiv.classList.add("message");
 
-    const time =
-      msg.timestamp instanceof Date ? msg.timestamp.toLocaleTimeString() : "";
+    const header = document.createElement("div");
+    header.classList.add("message-header");
 
-    // Await the nickname since getNickname is async
-    let nickname = await getNickname(msg.uid);
-    if (!nickname) nickname = "Anon";
+    // Author wrapper for avatar + name
+    const authorWrapper = document.createElement("div");
+    authorWrapper.classList.add("message-author-wrapper");
 
-    msgDiv.textContent = `${nickname} (${time}): ${msg.text}`;
+    if (photoURL) {
+      const avatar = document.createElement("img");
+      avatar.src = photoURL;
+      avatar.alt = "User photo";
+      avatar.classList.add("message-avatar");
+      // Hide avatar if image fails to load
+      avatar.onerror = () => (avatar.style.display = "none");
+      authorWrapper.appendChild(avatar);
+    }
+
+    const author = document.createElement("span");
+    author.classList.add("message-author");
+    author.textContent = nickname;
+    authorWrapper.appendChild(author);
+
+    header.appendChild(authorWrapper);
+
+    // Timestamp with hover for full date
+    const timestamp = document.createElement("div");
+    timestamp.classList.add("message-timestamp");
+    timestamp.textContent = time;
+    if (msg.timestamp instanceof Date) {
+      timestamp.title = msg.timestamp.toString();
+    }
+    header.appendChild(timestamp);
+
+    const content = document.createElement("div");
+    content.classList.add("message-content");
+    content.textContent = msg.text;
+
+    msgDiv.appendChild(header);
+    msgDiv.appendChild(content);
+
     messagesDiv.appendChild(msgDiv);
   }
 
-  messagesDiv.scrollTop = 0; // Scroll to top to show newest message
+  if (isAtBottom) {
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  }
 }
 
 async function handleUser(user) {
@@ -78,70 +155,54 @@ async function handleUser(user) {
     return;
   }
 
-  // Hide sign-in buttons on signed-in
-  signInGoogleBtn.style.display = "none";
-  signInGitHubBtn.style.display = "none";
-  signInMicrosoftBtn.style.display = "none";
-  signInEmailBtn.style.display = "none";
-  signUpEmailBtn.style.display = "none";
-  emailInput.style.display = "none";
-  passwordInput.style.display = "none";
+  loggedInDiv.style.display = "block";
+  loggedOutDiv.style.display = "none";
 
-  signOutBtn.style.display = "inline-block";
-  inputSection.style.display = "flex";
-  userInfo.style.display = "block";
+  let profile = (await getUserProfile(user.uid)) || {};
 
-  // Get or prompt for nickname
-  let nickname = await getNickname(user.uid);
+  // Nickname handling
+  let nickname = profile.nickname;
   if (!nickname || nickname === "Anon") {
-    nickname = prompt(
-      "Please enter your nickname:\n(This cannot be changed later except by a developer)"
-    );
-    if (nickname && nickname.trim().length > 0) {
-      nickname = nickname.trim();
-    } else {
-      nickname = (user.displayName || user.email || "").split(" ")[0];
-    }
-    await setUserNickname(user.uid, nickname);
+    nickname = prompt("Enter your nickname:");
+    nickname = nickname?.trim() || user.displayName || user.email || "User";
+    await setUserProfile(user.uid, "nickname", nickname);
+  }
+
+  // Photo handling
+  let photoURL = profile.photoURL || user.photoURL || null;
+  if (photoURL && profile.photoURL !== photoURL) {
+    await setUserProfile(user.uid, "photoURL", photoURL);
   }
 
   userNameSpan.textContent = nickname;
 
-  // Set provider name text
-  let providerId = user.providerData[0]?.providerId || "unknown";
-  let providerName = "Unknown";
+  const providerId = user.providerData[0]?.providerId || "unknown";
+  const providerMap = {
+    "google.com": "Google",
+    "github.com": "GitHub",
+    "microsoft.com": "Microsoft",
+    password: "Email",
+  };
 
-  switch (providerId) {
-    case "google.com":
-      providerName = "Google";
-      break;
-    case "github.com":
-      providerName = "GitHub";
-      break;
-    case "microsoft.com":
-      providerName = "Microsoft";
-      break;
-    case "password":
-      providerName = "Email";
-      break;
+  providerSpan.textContent = providerMap[providerId] || "Unknown";
+
+  if (photoURL) {
+    userPhotoImg.src = photoURL;
+    userPhotoImg.style.display = "inline-block";
+  } else {
+    userPhotoImg.style.display = "none";
   }
 
-  providerSpan.textContent = `${providerName}`;
-
-  // Subscribe to messages
-  if (unsubscribeMessages) unsubscribeMessages();
+  try {
+    if (unsubscribeMessages) unsubscribeMessages();
+  } catch (e) {
+    console.error("Failed to unsubscribe from messages:", e);
+  }
   unsubscribeMessages = listenMessages(displayMessages);
 }
 
-// Event Listeners for sign-in buttons
 async function handleSignIn(method) {
-  // Disable all sign-in buttons
-  signInGoogleBtn.disabled = true;
-  signInGitHubBtn.disabled = true;
-  signInMicrosoftBtn.disabled = true;
-  signInEmailBtn.disabled = true;
-  signUpEmailBtn.disabled = true;
-
+  setButtonsDisabled(true);
   try {
     let email = null,
       password = null;
@@ -163,35 +224,31 @@ async function handleSignIn(method) {
   } catch (e) {
     alert(`${method} failed: ${e.message}`);
   } finally {
-    // Enable all buttons again
-    signInGoogleBtn.disabled = false;
-    signInGitHubBtn.disabled = false;
-    signInMicrosoftBtn.disabled = false;
-    signInEmailBtn.disabled = false;
-    signUpEmailBtn.disabled = false;
+    setButtonsDisabled(false);
   }
 }
 
-// Event listeners remain same
-signInGoogleBtn.addEventListener("click", () => handleSignIn("google"));
-signInGitHubBtn.addEventListener("click", () => handleSignIn("github"));
-signInMicrosoftBtn.addEventListener("click", () => handleSignIn("microsoft"));
-signInEmailBtn.addEventListener("click", () => handleSignIn("email"));
-signUpEmailBtn.addEventListener("click", () => handleSignIn("signup-email"));
-
-signOutBtn.addEventListener("click", async () => {
+async function signOut() {
   signOutBtn.disabled = true;
   try {
     await signOutUser();
   } finally {
     signOutBtn.disabled = false;
   }
+}
+
+signOutBtn.addEventListener("click", async () => {
+  await signOut();
 });
 
-// Send message logic
-sendBtn.addEventListener("click", async () => {
+async function sendMessageFromInput() {
   const text = messageInput.value.trim();
   if (!text) return;
+
+  if (text.length > 1000) {
+    alert("Message is too long (max 1000 characters).");
+    return;
+  }
 
   const user = getCurrentUser();
   if (!user) {
@@ -201,14 +258,19 @@ sendBtn.addEventListener("click", async () => {
 
   await sendMessage(user.uid, text);
   messageInput.value = "";
+  messageInput.focus();
+}
+
+sendBtn.addEventListener("click", async () => {
+  await sendMessageFromInput();
 });
 
-messageInput.addEventListener("keydown", (event) => {
+messageInput.addEventListener("keydown", async (event) => {
   if (event.key === "Enter" && !event.shiftKey) {
     event.preventDefault();
-    sendBtn.click();
+    await sendMessageFromInput();
   }
 });
 
-// Listen for auth state changes
+// Initialize auth listener
 onAuthStateChange(handleUser);

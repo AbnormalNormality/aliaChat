@@ -44,23 +44,8 @@ const githubProvider = new GithubAuthProvider();
 const microsoftProvider = new OAuthProvider("microsoft.com");
 
 // --- Cache ---
-const nicknameCache = {};
 const messagesCol = collection(db, "messages");
 const messagesQuery = query(messagesCol, orderBy("timestamp"));
-
-// --- Nickname Utilities ---
-async function getNickname(uid) {
-  if (nicknameCache[uid]) return nicknameCache[uid];
-  const userDoc = await getDoc(doc(db, "users", uid));
-  const nickname = userDoc.exists() ? userDoc.data().nickname : "Anon";
-  nicknameCache[uid] = nickname;
-  return nickname;
-}
-
-async function setUserNickname(uid, nickname) {
-  await setDoc(doc(db, "users", uid), { nickname });
-  nicknameCache[uid] = nickname;
-}
 
 // --- Messaging ---
 async function sendMessage(uid, text) {
@@ -138,14 +123,23 @@ async function signOutUser() {
   }
 }
 
+async function setUserProfile(uid, key, value) {
+  await setDoc(doc(db, "users", uid), { [key]: value }, { merge: true });
+}
+
+async function getUserProfile(uid) {
+  const userDoc = await getDoc(doc(db, "users", uid));
+  return userDoc.exists() ? userDoc.data() : null;
+}
+
 // --- Exports ---
 export {
-  getNickname,
-  setUserNickname,
   sendMessage,
   listenMessages,
   signIn,
   onAuthStateChange,
   getCurrentUser,
   signOutUser,
+  setUserProfile,
+  getUserProfile,
 };
