@@ -2,7 +2,6 @@
 <html lang="en">
   <head>
     <base href="" />
-
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
@@ -16,16 +15,29 @@
 
     <title>Alia Chat</title>
     <link rel="icon" href="assets/favicon.png" type="image/png" />
-
     <link href="src/main.css" type="stylesheet" />
   </head>
 
   <body>
     <div class="container">
-      <button id="signInBtn">Sign In with Google</button>
+      <h1>Sign In</h1>
+
+      <button id="signInGoogle">Sign In with Google</button>
+      <button id="signInGitHub">Sign In with GitHub</button>
+      <button id="signInMicrosoft">Sign In with Microsoft</button>
+
+      <div id="emailLogin">
+        <input type="email" id="email" placeholder="Email" />
+        <input type="password" id="password" placeholder="Password" />
+        <button id="signInEmail">Sign In with Email</button>
+        <button id="signUpEmail">Sign Up with Email</button>
+      </div>
+
+      <button id="signOutBtn" style="display: none">Sign Out</button>
 
       <div id="userInfo" style="display: none">
-        Signed in as: <span id="userName"></span>
+        Signed in as: <span id="userName"></span><br />
+        Signed in with: <span id="provider"></span>
       </div>
 
       <div id="inputSection" style="display: none">
