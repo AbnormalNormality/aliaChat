@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <base href="" />
+
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <meta name="og:title" content="Alia Chat" />
+    <meta name="og:type" content="website" />
+    <meta name="og:image" content="assets/og-image.jpeg" />
+    <meta
+      name="og:description"
+      content="Work in progress chat basic chat platform."
+    />
+
+    <title>Alia Chat</title>
+    <link rel="icon" href="assets/favicon.png" type="image/png" />
+
+    <link href="src/main.css" type="stylesheet" />
+  </head>
+
+  <body>
+    <div class="container">
+      <button id="signInBtn">Sign In with Google</button>
+
+      <div id="userInfo" style="display: none">
+        Signed in as: <span id="userName"></span>
+      </div>
+
+      <div id="inputSection" style="display: none">
+        <input
+          type="text"
+          id="messageInput"
+          placeholder="Type your message..."
+        />
+        <button id="sendBtn">Send</button>
+      </div>
+
+      <div id="messages"></div>
+    </div>
+
+    <script src="src/main.js"></script>
+    <script type="module" src="src/firebase-backend.js"></script>
+    <script type="module" src="src/firebase-frontend.js"></script>
+  </body>
+</html>
