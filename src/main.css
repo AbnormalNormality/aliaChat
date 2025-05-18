@@ -151,3 +151,11 @@ button {
 #emailLogin {
   margin-top: 5px;
 }
+
+.separator {
+  height: 100%;
+  border: none;
+  background-color: var(--border-colour);
+  width: 2px;
+  margin: 0 10px;
+}

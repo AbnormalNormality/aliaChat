@@ -7,6 +7,11 @@ import {
   signOutUser,
   setUserProfile,
   getUserProfile,
+  db,
+  collection,
+  getDocs,
+  writeBatch,
+  doc,
 } from "./firebase-backend.js";
 
 const loggedOutDiv = document.getElementById("loggedOut");
@@ -25,6 +30,8 @@ const messageInput = document.getElementById("messageInput");
 const signOutBtn = document.getElementById("signOutBtn");
 
 const userPhotoImg = document.getElementById("userPhoto");
+
+const toggleNotifications = document.getElementById("toggleNotifications");
 
 let unsubscribeMessages = null;
 const userCache = {};
@@ -78,6 +85,9 @@ async function displayMessages(messages) {
 
   messagesDiv.innerHTML = "";
   const sortedMessages = [...messages].slice(-50);
+
+  const lastMsg = sortedMessages[sortedMessages.length - 1];
+  if (!lastMsg) return;
 
   for (const msg of sortedMessages) {
     const time =
@@ -142,6 +152,22 @@ async function displayMessages(messages) {
     msgDiv.appendChild(content);
 
     messagesDiv.appendChild(msgDiv);
+  }
+
+  const lastNotifiedId = localStorage.getItem("lastNotifiedMessageId");
+
+  const user = getCurrentUser();
+
+  if (lastMsg.id && lastMsg.id !== lastNotifiedId && lastMsg.uid != user.uid) {
+    let profile = userCache[lastMsg.uid];
+    if (!profile) {
+      profile = (await getUserProfile(lastMsg.uid)) || {};
+      userCache[lastMsg.uid] = profile;
+    }
+    const nickname = profile.nickname || "Anon";
+
+    notify(`New message from ${nickname}: ${lastMsg.text}`);
+    localStorage.setItem("lastNotifiedMessageId", lastMsg.id);
   }
 
   if (isAtBottom) {
@@ -271,6 +297,61 @@ messageInput.addEventListener("keydown", async (event) => {
     await sendMessageFromInput();
   }
 });
+
+if (!("Notification" in window)) {
+  alert("This browser does not support desktop notifications.");
+} else if (Notification.permission !== "granted") {
+  Notification.requestPermission().then((permission) => {
+    if (permission === "granted") {
+      alert("Notifications enabled!");
+    } else {
+      alert("Notifications denied.");
+    }
+  });
+}
+
+function notify(content) {
+  if (Notification.permission === "granted" && toggleNotifications.checked) {
+    new Notification(content);
+  }
+}
+
+toggleNotifications.addEventListener("change", () => {
+  localStorage.setItem("notificationsEnabled", toggleNotifications.checked);
+});
+
+const enableNotifs = localStorage.getItem("notificationsEnabled");
+if (enableNotifs !== null) {
+  toggleNotifications.checked = enableNotifs === "true";
+}
+
+async function clearAllMessages() {
+  const messagesRef = collection(db, "messages");
+  const snapshot = await getDocs(messagesRef);
+
+  const batch = writeBatch(db);
+
+  snapshot.forEach((docSnap) => {
+    batch.delete(doc(db, "messages", docSnap.id));
+  });
+
+  await batch.commit();
+  console.log("All messages cleared");
+}
+
+async function handleKeyRelease(event) {
+  const user = getCurrentUser();
+  if (!user) return;
+
+  if (devIds.includes(user.uid) && event.ctrlKey && event.key === "0") {
+    console.log("Triggering clearAllMessages");
+    clearAllMessages().catch(console.error);
+  }
+}
+
+document.addEventListener("keyup", handleKeyRelease);
+
+const devIds = ["EDxShAtQrAhVlTp1PhiuWxGyWB23"];
 
 // Initialize auth listener
 onAuthStateChange(handleUser);

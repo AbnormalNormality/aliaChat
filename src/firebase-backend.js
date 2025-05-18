@@ -10,6 +10,8 @@ import {
   doc,
   getDoc,
   setDoc,
+  getDocs,
+  writeBatch,
 } from "https://www.gstatic.com/firebasejs/11.7.3/firebase-firestore.js";
 
 import {
@@ -142,4 +144,9 @@ export {
   signOutUser,
   setUserProfile,
   getUserProfile,
+  getFirestore,
+  db,
+  collection,
+  getDocs,
+  writeBatch,doc
 };
