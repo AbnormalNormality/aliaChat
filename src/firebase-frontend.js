@@ -12,7 +12,7 @@ import {
 const loggedOutDiv = document.getElementById("loggedOut");
 const loggedInDiv = document.getElementById("loggedIn");
 
-const userNameSpan = document.getElementById("userName");
+const usernameSpan = document.getElementById("username");
 const providerSpan = document.getElementById("provider");
 
 const emailInput = document.getElementById("email");
@@ -77,7 +77,7 @@ async function displayMessages(messages) {
     nearBottomThreshold;
 
   messagesDiv.innerHTML = "";
-  const sortedMessages = [...messages];
+  const sortedMessages = [...messages].slice(-50);
 
   for (const msg of sortedMessages) {
     const time =
@@ -174,7 +174,7 @@ async function handleUser(user) {
     await setUserProfile(user.uid, "photoURL", photoURL);
   }
 
-  userNameSpan.textContent = nickname;
+  usernameSpan.textContent = nickname;
 
   const providerId = user.providerData[0]?.providerId || "unknown";
   const providerMap = {

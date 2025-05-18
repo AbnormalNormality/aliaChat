@@ -36,18 +36,19 @@
     </div>
 
     <div id="loggedIn" class="container" style="display: none">
-      <div id="userInfo">
-        <img
-          id="userPhoto"
-          src=""
-          alt="User Photo"
-          style="width: 40px; height: 40px; border-radius: 50%; display: none"
-        />
-        <div id="userName"></div>
-        <div id="provider"></div>
-      </div>
+      <div class="header">
+        <div id="userInfo">
+          <div class="author-wrapper">
+            <img id="userPhoto" alt="User Photo" />
+            <div class="name-info">
+              <div id="username"></div>
+              <div id="provider"></div>
+            </div>
+          </div>
+        </div>
 
-      <button id="signOutBtn">Sign Out</button>
+        <button id="signOutBtn">Sign Out</button>
+      </div>
 
       <div id="messages"></div>
 
